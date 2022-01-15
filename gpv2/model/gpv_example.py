@@ -37,6 +37,9 @@ class GPVExample:
 
   """Text to learn to generate for this example, if there is any"""
   target_text: Optional[Any] = None
+  index_of_class: Optional[str] = None
+
+  correct_answer: Optional[str] = None
 
   """Meta-data about this example"""
   meta: Any = None

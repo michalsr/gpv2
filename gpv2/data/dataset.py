@@ -38,6 +38,10 @@ class Task(FromParams, enum.Enum):
   LOCALIZATION = "loc"
   CAPTIONING = "cap"
   CLS_IN_CONTEXT = "cic"
+  IMAGECONTRAST = "imagecontrast" #lesson
+  TEXTCONTRAST = "textcontrast" #lesson
+  MIL = "mil" #lesson 
+  SYNONYM = "synonym" #lesson
 
   @classmethod
   def from_params(

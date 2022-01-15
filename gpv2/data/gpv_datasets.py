@@ -31,7 +31,7 @@ COCO_CATEGORIES = list(COCO_ID_TO_CATEGORY.values())
 COCO_CATEGORIES_TO_ID = {k: i for i, k in enumerate(COCO_CATEGORIES)}
 
 
-def load_instances(kind, split, gpv_split=True) -> List[Dict]:
+def load_instances(kind, split, gpv_split=True,unseen=None) -> List[Dict]:
   """Loads GPV data in list-of-dictionary format"""
 
   if kind == "cls":
@@ -50,17 +50,19 @@ def load_instances(kind, split, gpv_split=True) -> List[Dict]:
     split_txt = ""
   elif gpv_split:
     split_txt = "gpv_split"
-  else:
+  elif not gpv_split and not unseen:
     split_txt = "original_split"
+  if unseen:
+    split_txt = 'unseen_10'
   target_file = join(file_paths.GPV_DATA_DIR, ds, split_txt, f"{split}.json")
   logging.info(f"Loading instances from {target_file}")
   return load_json_object(target_file)
 
 
-def load_gpv_loc(split, gpv_split) -> List[LocalizationExample]:
+def load_gpv_loc(split, gpv_split,unseen) -> List[LocalizationExample]:
   """Load GPV-I detection data"""
 
-  raw_instances = load_instances("detection", split, gpv_split)
+  raw_instances = load_instances("detection", split, gpv_split,unseen)
   out = []
   for x in raw_instances:
     if "coco_categories" in x:
@@ -93,10 +95,10 @@ def get_image_id(image_dict):
   return f'coco/{image_dict["subset"]}/COCO_{image_dict["subset"]}_{str(image_dict["image_id"]).zfill(12)}.jpg'
 
 
-def load_gpv_vqa(split, gpv_split) -> List[VqaExample]:
+def load_gpv_vqa(split, gpv_split,unseen) -> List[VqaExample]:
   """Load GPV-I VQA data"""
 
-  raw_instances = load_instances("vqa", split, gpv_split)
+  raw_instances = load_instances("vqa", split, gpv_split,unseen)
   out = []
   for x in raw_instances:
     cats = x.get("coco_categories")
@@ -117,10 +119,10 @@ def load_gpv_vqa(split, gpv_split) -> List[VqaExample]:
   return out
 
 
-def load_gpv_captioning(split, gpv_split) -> List[CaptioningExample]:
+def load_gpv_captioning(split, gpv_split,unseen) -> List[CaptioningExample]:
   """Load GPV-I captioning data"""
 
-  raw_instances = load_instances("cap", split, gpv_split)
+  raw_instances = load_instances("cap", split, gpv_split,unseen)
   grouped_by_image = defaultdict(list)
   for i, x in enumerate(raw_instances):
     meta = {}
@@ -149,15 +151,15 @@ def load_gpv_captioning(split, gpv_split) -> List[CaptioningExample]:
   return out
 
 
-def load_gpv_cls(split, gpv_split) -> List[ClsExample]:
-  return _load_gpv_cls(split, gpv_split, False)
+def load_gpv_cls(split, gpv_split,unseen) -> List[ClsExample]:
+  return _load_gpv_cls(split, gpv_split,unseen, False)
 
 
-def load_gpv_cic(split, gpv_split) -> List[ClsExample]:
-  return _load_gpv_cls(split, gpv_split, True)
+def load_gpv_cic(split, gpv_split,unseen) -> List[ClsExample]:
+  return _load_gpv_cls(split, gpv_split, unseen,True)
 
 
-def _load_gpv_cls(split, gpv_split, in_context=False) -> List:
+def _load_gpv_cls(split, gpv_split, unseen=None,in_context=False) -> List:
   """Load GPV-I CLS data"""
   if in_context:
     def fn(i, image_id, category_id, box, meta):
@@ -172,7 +174,7 @@ def _load_gpv_cls(split, gpv_split, in_context=False) -> List:
         f"coco-box{i}", image_id,
         COCO_ID_TO_CATEGORY[category_id], crop=box, meta=meta)
 
-  raw_instances = load_instances("cls", split, gpv_split)
+  raw_instances = load_instances("cls", split, gpv_split,unseen)
   out = []
   for x in raw_instances:
     cats = x.get("coco_categories")
@@ -255,13 +257,14 @@ class GpvDataset(Dataset):
     Task.LOCALIZATION: UNSEEN2,
   }
 
-  def __init__(self, task: Task, split: str, gpv_split=True, sample=None):
+  def __init__(self, task: Task, split: str, gpv_split=True, sample=None,unseen=None):
     if split not in {"test", "val", "train"}:
       raise ValueError(split)
     self.sample = sample
     self.task = task
     self.split = split
     self.gpv_split = gpv_split
+    self.unseen = unseen 
 
   def get_name(self):
     kind = "gpvsce" if self.gpv_split else "gpv"
@@ -285,7 +288,7 @@ class GpvDataset(Dataset):
     return CocoCategories(synonyms)
 
   def load(self):
-    instances = self.KINDS[self.task](self.split, self.gpv_split)
+    instances = self.KINDS[self.task](self.split, self.gpv_split,self.unseen)
     if self.sample:
       instances.sort(key=lambda x: x.gpv_id)
       np.random.RandomState(613423).shuffle(instances)

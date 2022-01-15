@@ -108,6 +108,8 @@ def get_trainer_from_args(
       tasks.update({x: None for x in Task})
     elif dataset == "non-cls":
       tasks.update({x: None for x in [Task.VQA, Task.CAPTIONING, Task.DETECTION]})
+    elif dataset == 'lesson':
+      continue
     else:
       tasks[Task(dataset)] = None
 

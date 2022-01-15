@@ -6,7 +6,7 @@ from copy import deepcopy
 
 import torch.utils.data
 from transformers import AutoConfig
-
+from allennlp.common import FromParams, Params, Registrable
 from gpv2.data.dataset import Task
 from gpv2.experiments.trainer_cli import add_train_args, get_trainer_from_args, \
   run_trainer_from_args
